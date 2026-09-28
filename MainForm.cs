@@ -16,10 +16,7 @@ namespace SortingVisualizer
     {
         private readonly SortVisualizer _visualizer;
 
-        // Режим: true — каждая итерация, false — только финальный массив
         private bool _showEveryIteration = true;
-
-        // Порог: если элементов больше — анимация выключается (защита от зависания)
         private const int AnimateThreshold = 500;
 
         private double[] _currentArray = new double[0];
@@ -30,8 +27,6 @@ namespace SortingVisualizer
             _visualizer = new SortVisualizer(panelViz);
             UpdateToggleCaption();
 
-            // Подписки на события — ПОСЛЕ InitializeComponent,
-            // чтобы не падал дизайнер WinForms.
             nudDelay.ValueChanged += NudDelay_ValueChanged;
             nudSkip.ValueChanged += NudSkip_ValueChanged;
             panelViz.Paint += PanelViz_Paint;
@@ -128,6 +123,15 @@ namespace SortingVisualizer
             panelViz.Invalidate();
         }
 
+        // ================== КАДР ВИЗУАЛИЗАЦИИ ==================
+
+        private class Frame
+        {
+            public double[] Data;
+            public int A;
+            public int B;
+        }
+
         // ================== РАСЧЁТ ==================
 
         private async void MiCalculate_Click(object sender, EventArgs e)
@@ -174,7 +178,7 @@ namespace SortingVisualizer
 
             bool ascending = rbAscending.Checked;
 
-            // 4. Скорость — читаем прямо с формы в момент запуска
+            // 4. Настройки визуализации
             int delayMs = (int)nudDelay.Value;
             int skipSteps = Math.Max(1, (int)nudSkip.Value);
 
@@ -186,14 +190,19 @@ namespace SortingVisualizer
                 for (int idx = 0; idx < algorithms.Count; idx++)
                 {
                     var algo = algorithms[idx];
-                    var copy = (double[])input.Clone();
-                    var sw = Stopwatch.StartNew();
-                    string status = "OK";
 
-                    lblStatus.Text = "Сортировка: " + algo.Name + "...";
+                    // ==== ЭТАП 1: СЧИТАЕМ (в фоне, без пауз) ====
+                    lblStatus.Text = "Сортировка: " + algo.Name + " (вычисление)...";
                     Application.DoEvents();
 
-                    bool animate = _showEveryIteration && copy.Length <= AnimateThreshold;
+                    var copy = (double[])input.Clone();
+                    var frames = new List<Frame>();
+
+                    bool recordFrames = _showEveryIteration && copy.Length <= AnimateThreshold;
+                    int frameCounter = 0;
+                    int stepCount = 0;
+
+                    var sw = Stopwatch.StartNew();
 
                     try
                     {
@@ -201,36 +210,27 @@ namespace SortingVisualizer
                         var localCopy = copy;
                         var localAscending = ascending;
                         var localBogoLimit = bogoLimit;
-                        var localAnimate = animate;
+                        var localRecord = recordFrames;
                         var localSkip = skipSteps;
-                        var localDelay = delayMs;
+                        var localFrames = frames;
 
                         await Task.Run(() =>
                         {
-                            int stepCounter = 0;
-
                             Action<double[], int, int> onStep = (arr, a, b) =>
                             {
-                                if (!localAnimate) return;
+                                Interlocked.Increment(ref stepCount);
 
-                                stepCounter++;
-                                if (stepCounter % localSkip != 0) return;
+                                if (!localRecord) return;
 
-                                if (panelViz.IsHandleCreated)
+                                frameCounter++;
+                                if (frameCounter % localSkip != 0) return;
+
+                                localFrames.Add(new Frame
                                 {
-                                    try
-                                    {
-                                        panelViz.BeginInvoke(new Action(() =>
-                                        {
-                                            _visualizer.Draw(arr, a, b);
-                                            panelViz.Invalidate();
-                                        }));
-                                    }
-                                    catch (InvalidOperationException) { }
-                                }
-
-                                if (localDelay > 0)
-                                    Thread.Sleep(localDelay);
+                                    Data = (double[])arr.Clone(),
+                                    A = a,
+                                    B = b
+                                });
                             };
 
                             localAlgo.Sort(localCopy, localAscending, onStep, localBogoLimit);
@@ -238,34 +238,66 @@ namespace SortingVisualizer
                     }
                     catch (Exception ex)
                     {
-                        status = "Ошибка: " + ex.Message;
+                        sw.Stop();
+                        dgvStats.Rows.Add(
+                            algo.Name,
+                            input.Length.ToString(),
+                            stepCount.ToString(),
+                            sw.Elapsed.TotalMilliseconds.ToString("F2"),
+                            "Ошибка: " + ex.Message);
+                        continue;
                     }
 
                     sw.Stop();
 
+                    // ==== Записываем ЧЕСТНОЕ время (без визуализации) ====
                     dgvStats.Rows.Add(
                         algo.Name,
                         input.Length.ToString(),
+                        stepCount.ToString(),
                         sw.Elapsed.TotalMilliseconds.ToString("F2"),
-                        status);
+                        "OK");
 
+                    // ==== ЭТАП 2: ПРОИГРЫВАЕМ кадры ====
+                    if (recordFrames && frames.Count > 0)
+                    {
+                        lblStatus.Text = "Визуализация: " + algo.Name +
+                                         " (" + frames.Count + " кадров)...";
+                        Application.DoEvents();
+
+                        for (int f = 0; f < frames.Count; f++)
+                        {
+                            var frame = frames[f];
+                            _visualizer.Draw(frame.Data, frame.A, frame.B);
+                            panelViz.Invalidate();
+                            panelViz.Update();
+
+                            if (delayMs > 0)
+                                await Task.Delay(delayMs);
+                        }
+                    }
+
+                    // Финальный кадр — всегда
                     _visualizer.Draw(copy);
                     panelViz.Invalidate();
+                    panelViz.Update();
 
                     lblStatus.Text = algo.Name + ": " +
-                        sw.Elapsed.TotalMilliseconds.ToString("F2") + " мс (" + status + ")";
+                        sw.Elapsed.TotalMilliseconds.ToString("F2") + " мс, " +
+                        stepCount + " итераций";
 
-                    if (animate)
-                        await Task.Delay(400);
+                    if (recordFrames && frames.Count > 0)
+                        await Task.Delay(300);
                 }
 
+                // ==== Итог: кто быстрее ====
                 var success = new List<KeyValuePair<string, double>>();
                 for (int i = 0; i < dgvStats.Rows.Count; i++)
                 {
                     var row = dgvStats.Rows[i];
-                    if (row.Cells[3].Value != null && (string)row.Cells[3].Value == "OK")
+                    if (row.Cells[4].Value != null && (string)row.Cells[4].Value == "OK")
                     {
-                        double t = double.Parse((string)row.Cells[2].Value);
+                        double t = double.Parse((string)row.Cells[3].Value);
                         success.Add(new KeyValuePair<string, double>(
                             (string)row.Cells[0].Value, t));
                     }

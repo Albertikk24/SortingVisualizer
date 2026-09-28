@@ -98,7 +98,7 @@
                 this.miFile, this.miCalculate, this.miClear, this.miToggleView, this.miExit });
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
-            this.menuStrip.Size = new System.Drawing.Size(960, 24);
+            this.menuStrip.Size = new System.Drawing.Size(1000, 24);
             this.menuStrip.TabIndex = 0;
 
             this.miFile.Text = "Файл";
@@ -138,7 +138,7 @@
 
             // ================= panelViz =================
             this.panelViz.Location = new System.Drawing.Point(260, 30);
-            this.panelViz.Size = new System.Drawing.Size(680, 400);
+            this.panelViz.Size = new System.Drawing.Size(720, 400);
             this.panelViz.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.panelViz.BackColor = System.Drawing.Color.White;
             this.panelViz.Name = "panelViz";
@@ -194,7 +194,7 @@
             // ================= grpSpeed =================
             this.grpSpeed.Text = "Скорость визуализации";
             this.grpSpeed.Location = new System.Drawing.Point(620, 440);
-            this.grpSpeed.Size = new System.Drawing.Size(320, 120);
+            this.grpSpeed.Size = new System.Drawing.Size(360, 120);
             this.grpSpeed.Controls.AddRange(new System.Windows.Forms.Control[] {
                 this.lblDelay, this.nudDelay, this.lblDelayHint,
                 this.lblSkip, this.nudSkip, this.lblSkipHint });
@@ -212,7 +212,7 @@
 
             this.lblDelayHint.Text = "0 — быстро, 100 — видно шаги, 500 — медленно";
             this.lblDelayHint.Location = new System.Drawing.Point(10, 45);
-            this.lblDelayHint.Size = new System.Drawing.Size(300, 16);
+            this.lblDelayHint.Size = new System.Drawing.Size(340, 16);
             this.lblDelayHint.ForeColor = System.Drawing.Color.Gray;
 
             this.lblSkip.Text = "Пропускать шагов:";
@@ -228,12 +228,12 @@
 
             this.lblSkipHint.Text = "1 — каждый шаг, 10 — каждый 10-й";
             this.lblSkipHint.Location = new System.Drawing.Point(10, 90);
-            this.lblSkipHint.Size = new System.Drawing.Size(300, 16);
+            this.lblSkipHint.Size = new System.Drawing.Size(340, 16);
             this.lblSkipHint.ForeColor = System.Drawing.Color.Gray;
 
             // ================= dgvStats =================
-            this.dgvStats.Location = new System.Drawing.Point(12, 570);
-            this.dgvStats.Size = new System.Drawing.Size(928, 160);
+            this.dgvStats.Location = new System.Drawing.Point(12, 575);
+            this.dgvStats.Size = new System.Drawing.Size(968, 160);
             this.dgvStats.ReadOnly = true;
             this.dgvStats.AllowUserToAddRows = false;
             this.dgvStats.RowHeadersVisible = false;
@@ -241,22 +241,24 @@
             this.dgvStats.Name = "dgvStats";
             this.dgvStats.Columns.Add("Algo", "Алгоритм");
             this.dgvStats.Columns.Add("Count", "Элементов");
+            this.dgvStats.Columns.Add("Iters", "Итераций");
             this.dgvStats.Columns.Add("Time", "Время, мс");
             this.dgvStats.Columns.Add("Status", "Статус");
 
-            this.dgvStats.Columns[0].FillWeight = 30;
-            this.dgvStats.Columns[1].FillWeight = 20;
+            this.dgvStats.Columns[0].FillWeight = 25;
+            this.dgvStats.Columns[1].FillWeight = 15;
             this.dgvStats.Columns[2].FillWeight = 20;
-            this.dgvStats.Columns[3].FillWeight = 60;
+            this.dgvStats.Columns[3].FillWeight = 20;
+            this.dgvStats.Columns[4].FillWeight = 50;
 
             // ================= lblStatus =================
-            this.lblStatus.Location = new System.Drawing.Point(12, 740);
-            this.lblStatus.Size = new System.Drawing.Size(928, 20);
+            this.lblStatus.Location = new System.Drawing.Point(12, 745);
+            this.lblStatus.Size = new System.Drawing.Size(968, 20);
             this.lblStatus.Text = "Готово";
             this.lblStatus.Name = "lblStatus";
 
             // ================= MainForm =================
-            this.ClientSize = new System.Drawing.Size(960, 770);
+            this.ClientSize = new System.Drawing.Size(1000, 775);
             this.Controls.Add(this.menuStrip);
             this.Controls.Add(this.dgvInput);
             this.Controls.Add(this.panelViz);
