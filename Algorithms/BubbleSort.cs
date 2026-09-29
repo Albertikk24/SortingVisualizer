@@ -8,13 +8,20 @@ namespace SortingVisualizer.Algorithms
 
         public void Sort(double[] data, bool ascending,
                          Action<double[], int, int> onStep,
+                         Action onPass,
                          int maxIterations)
         {
             int n = data.Length;
+            int lastSwap = n - 1;   // последняя перестановка в проходе
+
             for (int i = 0; i < n - 1; i++)
             {
+                if (onPass != null) onPass();   // ← новый проход
+
                 bool swapped = false;
-                for (int j = 0; j < n - 1 - i; j++)
+                int newLastSwap = 0;
+
+                for (int j = 0; j < lastSwap; j++)
                 {
                     bool needSwap = ascending
                         ? data[j] > data[j + 1]
@@ -26,10 +33,13 @@ namespace SortingVisualizer.Algorithms
                         data[j] = data[j + 1];
                         data[j + 1] = tmp;
                         swapped = true;
+                        newLastSwap = j;
                     }
                     if (onStep != null) onStep(data, j, j + 1);
                 }
-                if (!swapped) break;
+
+                lastSwap = newLastSwap;
+                if (!swapped) break;   // ранний выход
             }
         }
     }

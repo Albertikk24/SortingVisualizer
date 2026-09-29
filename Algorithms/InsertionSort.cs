@@ -8,10 +8,13 @@ namespace SortingVisualizer.Algorithms
 
         public void Sort(double[] data, bool ascending,
                          Action<double[], int, int> onStep,
+                         Action onPass,
                          int maxIterations)
         {
             for (int i = 1; i < data.Length; i++)
             {
+                if (onPass != null) onPass();   // ← один проход = вставка одного элемента
+
                 double key = data[i];
                 int j = i - 1;
 

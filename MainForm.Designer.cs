@@ -42,6 +42,7 @@
 
         private System.Windows.Forms.DataGridView dgvStats;
         private System.Windows.Forms.Label lblStatus;
+        private System.Windows.Forms.Label lblHint;
 
         protected override void Dispose(bool disposing)
         {
@@ -92,13 +93,14 @@
 
             this.dgvStats = new System.Windows.Forms.DataGridView();
             this.lblStatus = new System.Windows.Forms.Label();
+            this.lblHint = new System.Windows.Forms.Label();
 
             // ================= menuStrip =================
             this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.miFile, this.miCalculate, this.miClear, this.miToggleView, this.miExit });
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
-            this.menuStrip.Size = new System.Drawing.Size(1000, 24);
+            this.menuStrip.Size = new System.Drawing.Size(1100, 24);
             this.menuStrip.TabIndex = 0;
 
             this.miFile.Text = "Файл";
@@ -128,7 +130,7 @@
 
             // ================= dgvInput =================
             this.dgvInput.Location = new System.Drawing.Point(12, 30);
-            this.dgvInput.Size = new System.Drawing.Size(240, 400);
+            this.dgvInput.Size = new System.Drawing.Size(220, 400);
             this.dgvInput.AllowUserToAddRows = true;
             this.dgvInput.ColumnHeadersVisible = false;
             this.dgvInput.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
@@ -137,8 +139,8 @@
             this.dgvInput.Columns.Add(new System.Windows.Forms.DataGridViewTextBoxColumn { Name = "Value" });
 
             // ================= panelViz =================
-            this.panelViz.Location = new System.Drawing.Point(260, 30);
-            this.panelViz.Size = new System.Drawing.Size(720, 400);
+            this.panelViz.Location = new System.Drawing.Point(245, 30);
+            this.panelViz.Size = new System.Drawing.Size(840, 400);
             this.panelViz.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.panelViz.BackColor = System.Drawing.Color.White;
             this.panelViz.Name = "panelViz";
@@ -194,7 +196,7 @@
             // ================= grpSpeed =================
             this.grpSpeed.Text = "Скорость визуализации";
             this.grpSpeed.Location = new System.Drawing.Point(620, 440);
-            this.grpSpeed.Size = new System.Drawing.Size(360, 120);
+            this.grpSpeed.Size = new System.Drawing.Size(465, 120);
             this.grpSpeed.Controls.AddRange(new System.Windows.Forms.Control[] {
                 this.lblDelay, this.nudDelay, this.lblDelayHint,
                 this.lblSkip, this.nudSkip, this.lblSkipHint });
@@ -212,7 +214,7 @@
 
             this.lblDelayHint.Text = "0 — быстро, 100 — видно шаги, 500 — медленно";
             this.lblDelayHint.Location = new System.Drawing.Point(10, 45);
-            this.lblDelayHint.Size = new System.Drawing.Size(340, 16);
+            this.lblDelayHint.Size = new System.Drawing.Size(440, 16);
             this.lblDelayHint.ForeColor = System.Drawing.Color.Gray;
 
             this.lblSkip.Text = "Пропускать шагов:";
@@ -228,37 +230,54 @@
 
             this.lblSkipHint.Text = "1 — каждый шаг, 10 — каждый 10-й";
             this.lblSkipHint.Location = new System.Drawing.Point(10, 90);
-            this.lblSkipHint.Size = new System.Drawing.Size(340, 16);
+            this.lblSkipHint.Size = new System.Drawing.Size(440, 16);
             this.lblSkipHint.ForeColor = System.Drawing.Color.Gray;
 
             // ================= dgvStats =================
             this.dgvStats.Location = new System.Drawing.Point(12, 575);
-            this.dgvStats.Size = new System.Drawing.Size(968, 160);
+            this.dgvStats.Size = new System.Drawing.Size(1073, 180);
             this.dgvStats.ReadOnly = true;
             this.dgvStats.AllowUserToAddRows = false;
             this.dgvStats.RowHeadersVisible = false;
+            this.dgvStats.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dgvStats.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
             this.dgvStats.Name = "dgvStats";
+
             this.dgvStats.Columns.Add("Algo", "Алгоритм");
             this.dgvStats.Columns.Add("Count", "Элементов");
-            this.dgvStats.Columns.Add("Iters", "Итераций");
+            this.dgvStats.Columns.Add("Passes", "Проходов");
+            this.dgvStats.Columns.Add("Steps", "Сравнений");
             this.dgvStats.Columns.Add("Time", "Время, мс");
+            this.dgvStats.Columns.Add("Sorted", "Отсортирован");
             this.dgvStats.Columns.Add("Status", "Статус");
 
-            this.dgvStats.Columns[0].FillWeight = 25;
-            this.dgvStats.Columns[1].FillWeight = 15;
-            this.dgvStats.Columns[2].FillWeight = 20;
-            this.dgvStats.Columns[3].FillWeight = 20;
-            this.dgvStats.Columns[4].FillWeight = 50;
+            this.dgvStats.Columns[0].FillWeight = 20;
+            this.dgvStats.Columns[1].FillWeight = 12;
+            this.dgvStats.Columns[2].FillWeight = 12;
+            this.dgvStats.Columns[3].FillWeight = 14;
+            this.dgvStats.Columns[4].FillWeight = 12;
+            this.dgvStats.Columns[5].FillWeight = 14;
+            this.dgvStats.Columns[6].FillWeight = 40;
+
+            this.dgvStats.CellDoubleClick +=
+                new System.Windows.Forms.DataGridViewCellEventHandler(
+                    this.DgvStats_CellDoubleClick);
 
             // ================= lblStatus =================
-            this.lblStatus.Location = new System.Drawing.Point(12, 745);
-            this.lblStatus.Size = new System.Drawing.Size(968, 20);
+            this.lblStatus.Location = new System.Drawing.Point(12, 765);
+            this.lblStatus.Size = new System.Drawing.Size(1073, 20);
             this.lblStatus.Text = "Готово";
             this.lblStatus.Name = "lblStatus";
 
+            // ================= lblHint =================
+            this.lblHint.Location = new System.Drawing.Point(12, 785);
+            this.lblHint.Size = new System.Drawing.Size(1073, 18);
+            this.lblHint.Text = "Двойной клик по строке таблицы — показать итоговый массив.";
+            this.lblHint.ForeColor = System.Drawing.Color.Gray;
+            this.lblHint.Name = "lblHint";
+
             // ================= MainForm =================
-            this.ClientSize = new System.Drawing.Size(1000, 775);
+            this.ClientSize = new System.Drawing.Size(1100, 815);
             this.Controls.Add(this.menuStrip);
             this.Controls.Add(this.dgvInput);
             this.Controls.Add(this.panelViz);
@@ -268,6 +287,7 @@
             this.Controls.Add(this.grpSpeed);
             this.Controls.Add(this.dgvStats);
             this.Controls.Add(this.lblStatus);
+            this.Controls.Add(this.lblHint);
             this.MainMenuStrip = this.menuStrip;
             this.Name = "MainForm";
             this.Text = "Сортировки: визуализация и сравнение";

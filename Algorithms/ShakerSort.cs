@@ -8,6 +8,7 @@ namespace SortingVisualizer.Algorithms
 
         public void Sort(double[] data, bool ascending,
                          Action<double[], int, int> onStep,
+                         Action onPass,
                          int maxIterations)
         {
             int n = data.Length;
@@ -17,8 +18,11 @@ namespace SortingVisualizer.Algorithms
 
             for (int pass = 0; pass < maxPasses && swapped && left < right; pass++)
             {
+                if (onPass != null) onPass();   // ← один двойной проход
+
                 swapped = false;
 
+                // Прямой проход
                 for (int i = left; i < right; i++)
                 {
                     bool needSwap = ascending
@@ -35,6 +39,7 @@ namespace SortingVisualizer.Algorithms
                 }
                 right--;
 
+                // Обратный проход
                 for (int i = right; i > left; i--)
                 {
                     bool needSwap = ascending

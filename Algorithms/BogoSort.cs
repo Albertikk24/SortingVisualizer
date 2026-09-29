@@ -9,11 +9,14 @@ namespace SortingVisualizer.Algorithms
 
         public void Sort(double[] data, bool ascending,
                          Action<double[], int, int> onStep,
+                         Action onPass,
                          int maxIterations)
         {
             int iter = 0;
             while (!IsSorted(data, ascending) && iter < maxIterations)
             {
+                if (onPass != null) onPass();   // ← одно перемешивание = один проход
+
                 Shuffle(data);
                 iter++;
                 if (onStep != null) onStep(data, -1, -1);

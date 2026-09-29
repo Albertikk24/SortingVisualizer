@@ -8,13 +8,16 @@ namespace SortingVisualizer.Algorithms
 
         private bool _asc;
         private Action<double[], int, int> _step;
+        private Action _pass;
 
         public void Sort(double[] data, bool ascending,
                          Action<double[], int, int> onStep,
+                         Action onPass,
                          int maxIterations)
         {
             _asc = ascending;
             _step = onStep;
+            _pass = onPass;
             Qs(data, 0, data.Length - 1);
         }
 
@@ -22,6 +25,8 @@ namespace SortingVisualizer.Algorithms
         {
             if (lo < hi)
             {
+                if (_pass != null) _pass();   // ← один проход = одна рекурсия
+
                 int p = Partition(d, lo, hi);
                 Qs(d, lo, p - 1);
                 Qs(d, p + 1, hi);

@@ -21,6 +21,11 @@ namespace SortingVisualizer
 
         private double[] _currentArray = new double[0];
 
+        private readonly Dictionary<string, double[]> _results =
+            new Dictionary<string, double[]>();
+
+        private bool _ascending = true;
+
         public MainForm()
         {
             InitializeComponent();
@@ -132,6 +137,42 @@ namespace SortingVisualizer
             public int B;
         }
 
+        // ================== ПРОВЕРКА ОТСОРТИРОВАННОСТИ ==================
+
+        private static bool IsSorted(double[] arr, bool ascending)
+        {
+            for (int i = 0; i < arr.Length - 1; i++)
+            {
+                if (ascending)
+                {
+                    if (arr[i] > arr[i + 1]) return false;
+                }
+                else
+                {
+                    if (arr[i] < arr[i + 1]) return false;
+                }
+            }
+            return true;
+        }
+
+        // ================== ПРОГРЕВ JIT ==================
+
+        private static void WarmUpAlgorithms(List<ISortAlgorithm> algorithms)
+        {
+            foreach (var algo in algorithms)
+            {
+                try
+                {
+                    var tiny = new double[] { 2.0, 1.0 };
+                    algo.Sort(tiny, true, null, null, 100);
+                }
+                catch
+                {
+                    // прогрев не должен ломать основной запуск
+                }
+            }
+        }
+
         // ================== РАСЧЁТ ==================
 
         private async void MiCalculate_Click(object sender, EventArgs e)
@@ -176,14 +217,21 @@ namespace SortingVisualizer
                 return;
             }
 
-            bool ascending = rbAscending.Checked;
+            // ===== ПРОГРЕВ JIT =====
+            lblStatus.Text = "Прогрев алгоритмов...";
+            Application.DoEvents();
+            WarmUpAlgorithms(algorithms);
+            // ========================
 
-            // 4. Настройки визуализации
+            bool ascending = rbAscending.Checked;
+            _ascending = ascending;
+
             int delayMs = (int)nudDelay.Value;
             int skipSteps = Math.Max(1, (int)nudSkip.Value);
 
             SetUiEnabled(false);
             dgvStats.Rows.Clear();
+            _results.Clear();
 
             try
             {
@@ -191,7 +239,6 @@ namespace SortingVisualizer
                 {
                     var algo = algorithms[idx];
 
-                    // ==== ЭТАП 1: СЧИТАЕМ (в фоне, без пауз) ====
                     lblStatus.Text = "Сортировка: " + algo.Name + " (вычисление)...";
                     Application.DoEvents();
 
@@ -201,6 +248,7 @@ namespace SortingVisualizer
                     bool recordFrames = _showEveryIteration && copy.Length <= AnimateThreshold;
                     int frameCounter = 0;
                     int stepCount = 0;
+                    int passCount = 0;
 
                     var sw = Stopwatch.StartNew();
 
@@ -233,7 +281,10 @@ namespace SortingVisualizer
                                 });
                             };
 
-                            localAlgo.Sort(localCopy, localAscending, onStep, localBogoLimit);
+                            Action onPass = () => Interlocked.Increment(ref passCount);
+
+                            localAlgo.Sort(localCopy, localAscending,
+                                onStep, onPass, localBogoLimit);
                         });
                     }
                     catch (Exception ex)
@@ -242,23 +293,30 @@ namespace SortingVisualizer
                         dgvStats.Rows.Add(
                             algo.Name,
                             input.Length.ToString(),
+                            passCount.ToString(),
                             stepCount.ToString(),
                             sw.Elapsed.TotalMilliseconds.ToString("F2"),
+                            "—",
                             "Ошибка: " + ex.Message);
                         continue;
                     }
 
                     sw.Stop();
 
-                    // ==== Записываем ЧЕСТНОЕ время (без визуализации) ====
+                    string sortedMark = IsSorted(copy, ascending) ? "✔ да" : "✘ НЕТ";
+
                     dgvStats.Rows.Add(
                         algo.Name,
                         input.Length.ToString(),
+                        passCount.ToString(),
                         stepCount.ToString(),
                         sw.Elapsed.TotalMilliseconds.ToString("F2"),
+                        sortedMark,
                         "OK");
 
-                    // ==== ЭТАП 2: ПРОИГРЫВАЕМ кадры ====
+                    _results[algo.Name] = copy;
+
+                    // ==== ВИЗУАЛИЗАЦИЯ ====
                     if (recordFrames && frames.Count > 0)
                     {
                         lblStatus.Text = "Визуализация: " + algo.Name +
@@ -277,27 +335,29 @@ namespace SortingVisualizer
                         }
                     }
 
-                    // Финальный кадр — всегда
                     _visualizer.Draw(copy);
                     panelViz.Invalidate();
                     panelViz.Update();
 
                     lblStatus.Text = algo.Name + ": " +
                         sw.Elapsed.TotalMilliseconds.ToString("F2") + " мс, " +
-                        stepCount + " итераций";
+                        passCount + " проходов, " +
+                        stepCount + " сравнений, " +
+                        sortedMark;
 
                     if (recordFrames && frames.Count > 0)
                         await Task.Delay(300);
                 }
 
-                // ==== Итог: кто быстрее ====
+                // Итог
                 var success = new List<KeyValuePair<string, double>>();
                 for (int i = 0; i < dgvStats.Rows.Count; i++)
                 {
                     var row = dgvStats.Rows[i];
-                    if (row.Cells[4].Value != null && (string)row.Cells[4].Value == "OK")
+                    if (row.Cells[6].Value != null &&
+                        (string)row.Cells[6].Value == "OK")
                     {
-                        double t = double.Parse((string)row.Cells[3].Value);
+                        double t = double.Parse((string)row.Cells[4].Value);
                         success.Add(new KeyValuePair<string, double>(
                             (string)row.Cells[0].Value, t));
                     }
@@ -316,6 +376,22 @@ namespace SortingVisualizer
             }
         }
 
+        // ================== ДВОЙНОЙ КЛИК ПО ТАБЛИЦЕ ==================
+
+        private void DgvStats_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            string algoName = (string)dgvStats.Rows[e.RowIndex].Cells[0].Value;
+            if (string.IsNullOrEmpty(algoName)) return;
+            if (!_results.ContainsKey(algoName)) return;
+
+            var data = _results[algoName];
+
+            using (var form = new ResultForm(algoName, data, _ascending))
+                form.ShowDialog(this);
+        }
+
         private void SetUiEnabled(bool enabled)
         {
             menuStrip.Enabled = enabled;
@@ -326,6 +402,8 @@ namespace SortingVisualizer
             if (grpBogo != null) grpBogo.Enabled = enabled;
             if (grpSpeed != null) grpSpeed.Enabled = enabled;
         }
+
+        // ================== ЧТЕНИЕ GRID С ЗАПРЕТОМ ПРОБЕЛОВ ==================
 
         private bool TryReadGrid(out double[] data, out string error)
         {
@@ -340,18 +418,32 @@ namespace SortingVisualizer
                 var cell = row.Cells[0].Value;
                 if (cell == null || string.IsNullOrWhiteSpace(cell.ToString())) continue;
 
-                string s = cell.ToString().Trim().Replace('.', ',');
-                double v;
-                if (double.TryParse(s, NumberStyles.Any,
-                        CultureInfo.CurrentCulture, out v))
-                    list.Add(v);
-                else
+                string s = cell.ToString().Trim();
+
+                if (s.IndexOf(' ') >= 0 || s.IndexOf('\t') >= 0 ||
+                    s.IndexOf('\u00A0') >= 0)
                 {
-                    error = "Значение \"" + cell + "\" в строке " +
-                            (row.Index + 1) + " не является числом.";
+                    error = "Значение \"" + cell + "\" в строке " + (row.Index + 1) +
+                            " содержит пробелы. Вводите одно число без пробелов " +
+                            "(например, 1234.56, а не 1 234.56).";
                     data = null;
                     return false;
                 }
+
+                string normalized = s.Replace('.', ',');
+
+                double v;
+                if (!double.TryParse(normalized,
+                        NumberStyles.Float,
+                        CultureInfo.CurrentCulture, out v))
+                {
+                    error = "Значение \"" + cell + "\" в строке " + (row.Index + 1) +
+                            " не является числом.";
+                    data = null;
+                    return false;
+                }
+
+                list.Add(v);
             }
 
             data = list.ToArray();
@@ -364,6 +456,7 @@ namespace SortingVisualizer
         {
             dgvInput.Rows.Clear();
             dgvStats.Rows.Clear();
+            _results.Clear();
             _currentArray = new double[0];
             panelViz.BackgroundImage = null;
             panelViz.Invalidate();
