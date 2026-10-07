@@ -58,6 +58,9 @@
     <Compile Include="Algorithms\ISortAlgorithm.cs" />
     <Compile Include="Algorithms\QuickSort.cs" />
     <Compile Include="Algorithms\ShakerSort.cs" />
+    <Compile Include="DichotomyForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="GenerateDialog.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -67,6 +70,9 @@
     <Compile Include="MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="MenuForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Prompt.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -74,8 +80,11 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Services\DataGenerator.cs" />
+    <Compile Include="Services\DichotomySolver.cs" />
     <Compile Include="Services\ExcelLoader.cs" />
+    <Compile Include="Services\FunctionParser.cs" />
     <Compile Include="Services\GoogleSheetsLoader.cs" />
+    <Compile Include="Visualization\PlotVisualizer.cs" />
     <Compile Include="Visualization\SortVisualizer.cs" />
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
