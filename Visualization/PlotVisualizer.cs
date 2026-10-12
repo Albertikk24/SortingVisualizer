@@ -24,8 +24,16 @@ namespace SortingVisualizer.Visualization
         private double? _root;
         private bool _hasData;
 
+        // Подсветка текущего отрезка
         private double? _segA, _segB;
+
+        // Точки внутри отрезка
+        // _midC   — для дихотомии (одна точка, середина)
+        // _midX1  — для золотого сечения (левая внутренняя)
+        // _midX2  — для золотого сечения (правая внутренняя)
         private double? _midC;
+        private double? _midX1;
+        private double? _midX2;
 
         public PlotVisualizer(Panel panel) { _panel = panel; }
 
@@ -65,6 +73,17 @@ namespace SortingVisualizer.Visualization
             _segA = a;
             _segB = b;
             _midC = c;
+            _midX1 = null;
+            _midX2 = null;
+        }
+
+        public void SetSegmentGS(double? a, double? b, double? x1, double? x2)
+        {
+            _segA = a;
+            _segB = b;
+            _midC = null;
+            _midX1 = x1;
+            _midX2 = x2;
         }
 
         public void ZoomAt(float px, float py, double factor)
@@ -160,43 +179,26 @@ namespace SortingVisualizer.Visualization
 
                 if (_hasData)
                 {
-                    // ============ ЯРКАЯ ПОДСВЕТКА ТЕКУЩЕГО ОТРЕЗКА ============
+                    // Оранжевая подсветка отрезка [a, b]
                     if (_segA.HasValue && _segB.HasValue)
                     {
                         float ax = mapX(_segA.Value);
                         float bx = mapX(_segB.Value);
-                        float left = Math.Min(ax, bx);
-                        float width = Math.Abs(bx - ax);
+                        float lx = Math.Min(ax, bx);
+                        float wid = Math.Abs(bx - ax);
 
-                        // 1) Полупрозрачная оранжевая заливка во всю высоту
-                        using (var brush = new SolidBrush(Color.FromArgb(90, 255, 165, 0)))
-                            g.FillRectangle(brush, left, margin, width, plotH);
+                        using (var brush = new SolidBrush(Color.FromArgb(70, 255, 165, 0)))
+                            g.FillRectangle(brush, lx, margin, wid, plotH);
 
-                        // 2) Жирная оранжевая линия на оси X
-                        float yAxis = mapY(0);
-                        if (yAxis >= margin && yAxis <= h - margin)
+                        using (var pen = new Pen(Color.Orange, 2)
+                        { DashStyle = System.Drawing.Drawing2D.DashStyle.Dash })
                         {
-                            using (var pen = new Pen(Color.Orange, 6))
-                                g.DrawLine(pen, left, yAxis, left + width, yAxis);
-                        }
-
-                        // 3) Тонкие вертикальные границы отрезка
-                        using (var pen = new Pen(Color.Orange, 2) { DashStyle = System.Drawing.Drawing2D.DashStyle.Dash })
-                        {
-                            g.DrawLine(pen, left, margin, left, h - margin);
-                            g.DrawLine(pen, left + width, margin, left + width, h - margin);
-                        }
-
-                        // 4) Маркеры-стрелки сверху
-                        using (var pen = new Pen(Color.DarkOrange, 2))
-                        {
-                            float my = margin + 6;
-                            g.DrawLine(pen, left, my, left, my + 8);
-                            g.DrawLine(pen, left + width, my, left + width, my + 8);
+                            g.DrawLine(pen, lx, margin, lx, h - margin);
+                            g.DrawLine(pen, lx + wid, margin, lx + wid, h - margin);
                         }
                     }
 
-                    // ============ КРИВАЯ ============
+                    // Кривая
                     int samples = Math.Max(plotW * 2, 400);
                     using (var pen = new Pen(CurveColor, 2))
                     {
@@ -220,22 +222,21 @@ namespace SortingVisualizer.Visualization
                         }
                     }
 
-                    // ============ СЕРЕДИНА c ============
+                    // Точка c (для дихотомии)
                     if (_midC.HasValue)
                     {
                         float px = mapX(_midC.Value);
                         float py = mapY(0);
 
-                        // вертикальная линия от точки на графике до оси
                         double cy;
                         try { cy = _f.Evaluate(_midC.Value); }
                         catch { cy = 0; }
                         float pyGraph = mapY(cy);
 
-                        using (var pen = new Pen(Color.DarkGoldenrod, 1) { DashStyle = System.Drawing.Drawing2D.DashStyle.Dot })
+                        using (var pen = new Pen(Color.DarkGoldenrod, 1)
+                        { DashStyle = System.Drawing.Drawing2D.DashStyle.Dot })
                             g.DrawLine(pen, px, pyGraph, px, py);
 
-                        // круглая жёлтая точка на оси X
                         using (var brush = new SolidBrush(Color.Gold))
                         using (var pen = new Pen(Color.DarkGoldenrod, 2))
                         {
@@ -243,28 +244,39 @@ namespace SortingVisualizer.Visualization
                             g.DrawEllipse(pen, px - 7, py - 7, 14, 14);
                         }
 
-                        // точка на самой кривой
                         using (var brush = new SolidBrush(Color.DarkGoldenrod))
                             g.FillEllipse(brush, px - 4, pyGraph - 4, 8, 8);
                     }
 
-                    // ============ КОРЕНЬ ============
+                    // Две точки x1, x2 (для золотого сечения)
+                    if (_midX1.HasValue || _midX2.HasValue)
+                    {
+                        if (_midX1.HasValue) DrawPoint(g, mapX, mapY, _f, _midX1.Value,
+                            Color.DodgerBlue, Color.DarkBlue, "x1");
+                        if (_midX2.HasValue) DrawPoint(g, mapX, mapY, _f, _midX2.Value,
+                            Color.DeepPink, Color.DarkRed, "x2");
+                    }
+
+                    // Точка минимума/корня
                     if (_root.HasValue)
                     {
                         double rx = _root.Value;
                         float px = mapX(rx);
-                        float py = mapY(0);
+                        double ry;
+                        try { ry = _f.Evaluate(rx); }
+                        catch { ry = 0; }
+                        float py = mapY(ry);
 
                         using (var brush = new SolidBrush(RootColor))
-                            g.FillEllipse(brush, px - 6, py - 6, 12, 12);
+                            g.FillEllipse(brush, px - 7, py - 7, 14, 14);
 
                         using (var pen = new Pen(RootColor, 1)
                         { DashStyle = System.Drawing.Drawing2D.DashStyle.Dash })
-                            g.DrawLine(pen, px, margin, px, h - margin);
+                            g.DrawLine(pen, px, py, px, mapY(0));
 
                         using (var font = new Font("Segoe UI", 9, FontStyle.Bold))
                             g.DrawString("x = " + rx.ToString("F5"), font,
-                                Brushes.DarkRed, px + 8, py - 20);
+                                Brushes.DarkRed, px + 8, py - 22);
                     }
                 }
 
@@ -285,6 +297,41 @@ namespace SortingVisualizer.Visualization
             var old = _panel.BackgroundImage;
             _panel.BackgroundImage = bmp;
             if (old != null) old.Dispose();
+        }
+
+        private static void DrawPoint(Graphics g,
+            Func<double, float> mapX,
+            Func<double, float> mapY,
+            FunctionParser f,
+            double x,
+            Color fillColor,
+            Color borderColor,
+            string label)
+        {
+            float px = mapX(x);
+
+            double y;
+            try { y = f.Evaluate(x); }
+            catch { y = 0; }
+            float py = mapY(y);
+            float pyAxis = mapY(0);
+
+            // вертикальный пунктир от кривой до оси X
+            using (var pen = new Pen(borderColor, 1)
+            { DashStyle = System.Drawing.Drawing2D.DashStyle.Dot })
+                g.DrawLine(pen, px, py, px, pyAxis);
+
+            // точка на кривой
+            using (var brush = new SolidBrush(fillColor))
+            using (var pen = new Pen(borderColor, 2))
+            {
+                g.FillEllipse(brush, px - 6, py - 6, 12, 12);
+                g.DrawEllipse(pen, px - 6, py - 6, 12, 12);
+            }
+
+            // подпись
+            using (var font = new Font("Segoe UI", 8, FontStyle.Bold))
+                g.DrawString(label, font, new SolidBrush(borderColor), px + 8, py - 18);
         }
     }
 }

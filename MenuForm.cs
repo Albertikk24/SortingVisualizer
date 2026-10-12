@@ -9,7 +9,7 @@ namespace SortingVisualizer
         public MenuForm()
         {
             Text = "Выбор задачи";
-            Size = new Size(520, 340);
+            Size = new Size(520, 400);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
@@ -50,13 +50,29 @@ namespace SortingVisualizer
                 Show();
             };
 
+            var btnGolden = new Button();
+            btnGolden.Text = "Метод золотого сечения: поиск минимума";
+            btnGolden.Location = new Point(20, 200);
+            btnGolden.Size = new Size(460, 50);
+            btnGolden.Click += (s, e) =>
+            {
+                Hide();
+                using (var f = new GoldenSectionForm())
+                {
+                    f.FormClosed += (s2, e2) => Show();
+                    f.ShowDialog();
+                }
+                Show();
+            };
+
             var btnExit = new Button();
             btnExit.Text = "Выход";
-            btnExit.Location = new Point(360, 240);
+            btnExit.Location = new Point(360, 300);
             btnExit.Size = new Size(120, 40);
             btnExit.Click += (s, e) => Close();
 
-            Controls.AddRange(new Control[] { lblTitle, btnSort, btnDich, btnExit });
+            Controls.AddRange(new Control[] {
+                lblTitle, btnSort, btnDich, btnGolden, btnExit });
         }
     }
-}
+}   
